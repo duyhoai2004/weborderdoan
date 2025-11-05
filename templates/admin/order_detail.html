@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-file-invoice"></i> Chi tiết đơn hàng #{{ order['id'] }}</h1>
+        <a href="{{ url_for('admin_orders') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Quay lại
+        </a>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Thông tin đơn hàng -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Thông tin đơn hàng</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Mã đơn hàng:</strong> #{{ order['id'] }}</p>
+                            <p><strong>Ngày đặt:</strong> {{ order['created_at'] }}</p>
+                            <p><strong>Trạng thái:</strong> 
+                                <span class="badge {% if order['status'] == 'pending' %}bg-warning{% elif order['status'] == 'completed' %}bg-success{% elif order['status'] == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                    {{ order['status'] }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Tổng tiền:</strong> {{ "{:,.0f} VNĐ".format(order['total_amount']) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sản phẩm trong đơn hàng -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Sản phẩm</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Hình ảnh</th>
+                                    <th>Tên sản phẩm</th>
+                                    <th>Giá</th>
+                                    <th>Số lượng</th>
+                                    <th>Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>
+                                        <img src="{{ item['image_url'] }}" alt="{{ item['name'] }}" 
+                                             style="width: 50px; height: 50px; object-fit: cover;">
+                                    </td>
+                                    <td>{{ item['name'] }}</td>
+                                    <td>{{ "{:,.0f} VNĐ".format(item['price']) }}</td>
+                                    <td>{{ item['quantity'] }}</td>
+                                    <td>{{ "{:,.0f} VNĐ".format(item['price'] * item['quantity']) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Tổng cộng:</strong></td>
+                                    <td><strong>{{ "{:,.0f} VNĐ".format(order['total_amount']) }}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Thông tin khách hàng -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Thông tin khách hàng</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Họ tên:</strong> {{ order['customer_name'] }}</p>
+                    <p><strong>Số điện thoại:</strong> {{ order['customer_phone'] }}</p>
+                    <p><strong>Địa chỉ:</strong> {{ order['customer_address'] }}</p>
+                </div>
+            </div>
+            
+            <!-- Cập nhật trạng thái -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Cập nhật trạng thái</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin_update_order_status') }}">
+                        <input type="hidden" name="order_id" value="{{ order['id'] }}">
+                        <div class="mb-3">
+                            <select name="status" class="form-select">
+                                <option value="pending" {% if order['status'] == 'pending' %}selected{% endif %}>Chờ xử lý</option>
+                                <option value="confirmed" {% if order['status'] == 'confirmed' %}selected{% endif %}>Đã xác nhận</option>
+                                <option value="delivering" {% if order['status'] == 'delivering' %}selected{% endif %}>Đang giao hàng</option>
+                                <option value="completed" {% if order['status'] == 'completed' %}selected{% endif %}>Hoàn thành</option>
+                                <option value="cancelled" {% if order['status'] == 'cancelled' %}selected{% endif %}>Đã hủy</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-save"></i> Cập nhật
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

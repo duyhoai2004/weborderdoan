@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero-section bg-primary text-white py-5">
+    <div class="container text-center">
+        <h1 class="display-4">Chào mừng đến với FoodOrder</h1>
+        <p class="lead">Đặt món ăn yêu thích của bạn một cách dễ dàng</p>
+        <a href="{{ url_for('menu') }}" class="btn btn-warning btn-lg">Đặt hàng ngay</a>
+    </div>
+</div>
+
+<div class="container my-5">
+    <h2 class="text-center mb-4">Món ăn nổi bật</h2>
+    <div class="row">
+        {% for product in products[:4] %}
+        <div class="col-md-3 mb-4">
+            <div class="card h-100">
+                <img src="{{ product['image_url'] }}" class="card-img-top" alt="{{ product['name'] }}" style="height: 200px; object-fit: cover;">
+                <div class="card-body">
+                    <h5 class="card-title">{{ product['name'] }}</h5>
+                    <p class="card-text">{{ product['description'] }}</p>
+                    <p class="text-danger fw-bold">{{ "{:,.0f} VNĐ".format(product['price']) }}</p>
+                    <form method="POST" action="{{ url_for('add_to_cart') }}" class="add-to-cart-form">
+                        <input type="hidden" name="product_id" value="{{ product['id'] }}">
+                        <div class="input-group mb-2">
+                            <input type="number" name="quantity" value="1" min="1" class="form-control">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-cart-plus"></i> Thêm vào giỏ
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="text-center mt-4">
+        <a href="{{ url_for('menu') }}" class="btn btn-outline-primary">Xem tất cả món ăn</a>
+    </div>
+</div>
+{% endblock %}

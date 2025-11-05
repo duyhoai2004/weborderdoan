@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="card">
+                <div class="card-body py-5">
+                    <i class="fas fa-check-circle text-success fa-5x mb-4"></i>
+                    <h2 class="text-success">Đặt hàng thành công!</h2>
+                    <p class="lead">Cảm ơn bạn đã đặt hàng tại FoodOrder</p>
+                    <p><strong>Mã đơn hàng: #{{ order_id }}</strong></p>
+                    <p>Chúng tôi sẽ liên hệ với bạn trong thời gian sớm nhất để xác nhận đơn hàng.</p>
+                    
+                    <div class="mt-4">
+                        <a href="{{ url_for('menu') }}" class="btn btn-primary">
+                            <i class="fas fa-shopping-bag"></i> Tiếp tục mua hàng
+                        </a>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-home"></i> Về trang chủ
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
