@@ -1,0 +1,147 @@
+{% extends "customer/base.html" %}
+
+{% block title %}FoodOrder - Trang chủ{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero-section text-center">
+    <div class="container">
+        <h1 class="display-3 fw-bold mb-4">Đặt món ăn ngon</h1>
+        <p class="lead mb-4">Giao hàng nhanh chóng, đa dạng món ăn từ khắp nơi</p>
+        <a href="{{ url_for('menu') }}" class="btn btn-light btn-lg px-5">
+            <i class="fas fa-shopping-bag"></i> Đặt hàng ngay
+        </a>
+    </div>
+</div>
+
+<!-- Categories -->
+<div class="container mb-5">
+    <h2 class="text-center section-title">Danh mục món ăn</h2>
+    <div class="row justify-content-center mt-5">
+        {% for category in categories %}
+        <div class="col-md-2 col-6 mb-3">
+            <a href="{{ url_for('menu', category=category) }}" class="text-decoration-none">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-utensils fa-3x mb-3 text-primary"></i>
+                        <h6 class="mb-0">{{ category }}</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Featured Products -->
+<div class="container mb-5">
+    <h2 class="text-center section-title">Món ăn nổi bật</h2>
+    <div class="row mt-5">
+        {% for product in products %}
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card h-100">
+                <div style="overflow: hidden;">
+                    <img src="{{ product['image_url'] }}" class="card-img-top" alt="{{ product['name'] }}">
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <div class="mb-2">
+                        <span class="category-badge">{{ product['category'] }}</span>
+                    </div>
+                    <h5 class="card-title">{{ product['name'] }}</h5>
+                    <p class="card-text text-muted small flex-grow-1">
+                        {{ product['description'][:60] }}{% if product['description']|length > 60 %}...{% endif %}
+                    </p>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <span class="price-tag">{{ "{:,.0f}".format(product['price']) }}₫</span>
+                        <form method="POST" action="{{ url_for('add_to_cart') }}" class="add-to-cart-form">
+                            <input type="hidden" name="product_id" value="{{ product['id'] }}">
+                            <input type="hidden" name="quantity" value="1">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="fas fa-cart-plus"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="text-center mt-4">
+        <a href="{{ url_for('menu') }}" class="btn btn-primary btn-lg">
+            Xem tất cả món ăn <i class="fas fa-arrow-right"></i>
+        </a>
+    </div>
+</div>
+
+<!-- Features -->
+<div class="container mb-5">
+    <div class="row text-center">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0 bg-light">
+                <div class="card-body py-5">
+                    <i class="fas fa-shipping-fast fa-4x text-primary mb-3"></i>
+                    <h5>Giao hàng nhanh</h5>
+                    <p class="text-muted">Giao hàng trong 30 phút</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0 bg-light">
+                <div class="card-body py-5">
+                    <i class="fas fa-thumbs-up fa-4x text-success mb-3"></i>
+                    <h5>Chất lượng đảm bảo</h5>
+                    <p class="text-muted">Món ăn tươi ngon, vệ sinh</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0 bg-light">
+                <div class="card-body py-5">
+                    <i class="fas fa-headset fa-4x text-info mb-3"></i>
+                    <h5>Hỗ trợ 24/7</h5>
+                    <p class="text-muted">Luôn sẵn sàng hỗ trợ bạn</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Xử lý form thêm vào giỏ hàng
+    document.querySelectorAll('.add-to-cart-form').forEach(form => {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const response = await fetch(this.action, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast(result.message, 'success');
+                
+                // Cập nhật số lượng trong giỏ hàng
+                const cartBadge = document.querySelector('.cart-badge');
+                if (cartBadge) {
+                    cartBadge.textContent = result.cart_count;
+                } else if (result.cart_count > 0) {
+                    // Tạo badge mới nếu chưa có
+                    const cartLink = document.querySelector('a[href*="cart"]');
+                    const badge = document.createElement('span');
+                    badge.className = 'cart-badge';
+                    badge.textContent = result.cart_count;
+                    cartLink.appendChild(badge);
+                }
+            } else {
+                showToast(result.message, 'danger');
+            }
+        });
+    });
+</script>
+{% endblock %}

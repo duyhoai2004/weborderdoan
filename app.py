@@ -1,204 +1,219 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
-from database import init_db, get_db, close_db
+from database import init_db, close_db
 from models import Product, Order
-import json
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # Thay đổi key này trong production
+app.secret_key = 'your-secret-key-change-in-production-12345'
+app.config['SESSION_TYPE'] = 'filesystem'
 
-# Đăng ký database
+# Đăng ký hàm đóng database
 app.teardown_appcontext(close_db)
 
 @app.route('/')
 def index():
-    products = Product.get_all()
-    return render_template('index.html', products=products)
+    """Trang chủ"""
+    products = Product.get_all()[:8]  # Lấy 8 sản phẩm mới nhất
+    categories = Product.get_categories()
+    return render_template('customer/index.html', products=products, categories=categories)
 
 @app.route('/menu')
 def menu():
+    """Trang thực đơn"""
     category = request.args.get('category', '')
-    products = Product.get_all()
+    search = request.args.get('search', '')
     
-    if category:
-        products = [p for p in products if p['category'] == category]
+    if search:
+        products = Product.search(search)
+    elif category:
+        products = Product.get_by_category(category)
+    else:
+        products = Product.get_all()
     
-    categories = set([p['category'] for p in Product.get_all()])
-    return render_template('menu.html', products=products, categories=categories, selected_category=category)
+    categories = Product.get_categories()
+    return render_template('customer/menu.html', 
+                         products=products, 
+                         categories=categories, 
+                         selected_category=category,
+                         search_query=search)
+
+@app.route('/product/<int:product_id>')
+def product_detail(product_id):
+    """Chi tiết sản phẩm"""
+    product = Product.get_by_id(product_id)
+    if not product:
+        return redirect(url_for('menu'))
+    
+    # Lấy sản phẩm cùng danh mục
+    related_products = Product.get_by_category(product['category'])
+    related_products = [p for p in related_products if p['id'] != product_id][:4]
+    
+    return render_template('customer/product_detail.html', 
+                         product=product,
+                         related_products=related_products)
 
 @app.route('/add_to_cart', methods=['POST'])
 def add_to_cart():
-    product_id = int(request.form['product_id'])
-    quantity = int(request.form['quantity'])
-    
-    product = Product.get_by_id(product_id)
-    if not product:
-        return jsonify({'success': False, 'message': 'Sản phẩm không tồn tại'})
-    
-    # Khởi tạo giỏ hàng nếu chưa có
-    if 'cart' not in session:
-        session['cart'] = []
-    
-    cart = session['cart']
-    
-    # Kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
-    found = False
-    for item in cart:
-        if item['id'] == product_id:
-            item['quantity'] += quantity
-            found = True
-            break
-    
-    # Nếu chưa có, thêm mới
-    if not found:
-        cart.append({
-            'id': product_id,
-            'name': product['name'],
-            'price': product['price'],
-            'image_url': product['image_url'],
-            'quantity': quantity
+    """Thêm sản phẩm vào giỏ hàng"""
+    try:
+        product_id = int(request.form.get('product_id'))
+        quantity = int(request.form.get('quantity', 1))
+        
+        if quantity <= 0:
+            return jsonify({'success': False, 'message': 'Số lượng không hợp lệ'})
+        
+        product = Product.get_by_id(product_id)
+        if not product:
+            return jsonify({'success': False, 'message': 'Sản phẩm không tồn tại'})
+        
+        # Khởi tạo giỏ hàng nếu chưa có
+        if 'cart' not in session:
+            session['cart'] = []
+        
+        cart = session['cart']
+        
+        # Kiểm tra sản phẩm đã có trong giỏ hàng chưa
+        found = False
+        for item in cart:
+            if item['id'] == product_id:
+                item['quantity'] += quantity
+                found = True
+                break
+        
+        # Nếu chưa có, thêm mới
+        if not found:
+            cart.append({
+                'id': product_id,
+                'name': product['name'],
+                'price': product['price'],
+                'image_url': product['image_url'],
+                'quantity': quantity
+            })
+        
+        session['cart'] = cart
+        session.modified = True
+        
+        # Tính tổng số lượng items trong giỏ
+        total_items = sum(item['quantity'] for item in cart)
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Đã thêm {quantity} sản phẩm vào giỏ hàng',
+            'cart_count': len(cart),
+            'total_items': total_items
         })
     
-    session['cart'] = cart
-    session.modified = True
-    
-    return jsonify({
-        'success': True, 
-        'message': 'Đã thêm vào giỏ hàng',
-        'cart_count': len(cart)
-    })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/cart')
 def cart():
+    """Trang giỏ hàng"""
     cart_items = session.get('cart', [])
-    total = sum(item['price'] * item['quantity'] for item in cart_items)
-    return render_template('cart.html', cart_items=cart_items, total=total)
+    
+    # Tính tổng tiền
+    subtotal = sum(item['price'] * item['quantity'] for item in cart_items)
+    shipping_fee = 0 if subtotal >= 100000 else 20000  # Miễn phí ship từ 100k
+    total = subtotal + shipping_fee
+    
+    return render_template('customer/cart.html', 
+                         cart_items=cart_items, 
+                         subtotal=subtotal,
+                         shipping_fee=shipping_fee,
+                         total=total)
 
 @app.route('/update_cart', methods=['POST'])
 def update_cart():
-    product_id = int(request.form['product_id'])
-    quantity = int(request.form['quantity'])
+    """Cập nhật số lượng sản phẩm trong giỏ hàng"""
+    try:
+        product_id = int(request.form.get('product_id'))
+        action = request.form.get('action')  # increase, decrease, remove
+        
+        cart = session.get('cart', [])
+        
+        for item in cart:
+            if item['id'] == product_id:
+                if action == 'increase':
+                    item['quantity'] += 1
+                elif action == 'decrease':
+                    item['quantity'] -= 1
+                    if item['quantity'] <= 0:
+                        cart.remove(item)
+                elif action == 'remove':
+                    cart.remove(item)
+                break
+        
+        session['cart'] = cart
+        session.modified = True
+        
+        return redirect(url_for('cart'))
     
-    cart = session.get('cart', [])
-    
-    for item in cart:
-        if item['id'] == product_id:
-            if quantity <= 0:
-                cart.remove(item)
-            else:
-                item['quantity'] = quantity
-            break
-    
-    session['cart'] = cart
-    session.modified = True
-    
-    return redirect(url_for('cart'))
+    except Exception as e:
+        print(f"Error updating cart: {e}")
+        return redirect(url_for('cart'))
 
 @app.route('/checkout', methods=['GET', 'POST'])
 def checkout():
-    if request.method == 'POST':
-        customer_name = request.form['customer_name']
-        customer_phone = request.form['customer_phone']
-        customer_address = request.form['customer_address']
-        
-        cart_items = session.get('cart', [])
-        if not cart_items:
-            return redirect(url_for('cart'))
-        
-        # Tạo đơn hàng
-        order_id = Order.create(customer_name, customer_phone, customer_address, cart_items)
-        
-        # Xóa giỏ hàng
-        session.pop('cart', None)
-        
-        return render_template('checkout_success.html', order_id=order_id)
-    
+    """Trang thanh toán"""
     cart_items = session.get('cart', [])
+    
     if not cart_items:
         return redirect(url_for('cart'))
     
-    total = sum(item['price'] * item['quantity'] for item in cart_items)
-    return render_template('checkout.html', cart_items=cart_items, total=total)
-
-# Admin routes
-@app.route('/admin')
-def admin_dashboard():
-    orders = Order.get_all()
-    products = Product.get_all()
-    
-    total_orders = len(orders)
-    pending_orders = len([o for o in orders if o['status'] == 'pending'])
-    total_products = len(products)
-    
-    return render_template('admin/dashboard.html', 
-                         total_orders=total_orders,
-                         pending_orders=pending_orders,
-                         total_products=total_products,
-                         recent_orders=orders[:5])
-
-@app.route('/admin/products')
-def admin_products():
-    products = Product.get_all()
-    return render_template('admin/products.html', products=products)
-
-@app.route('/admin/products/add', methods=['GET', 'POST'])
-def admin_add_product():
     if request.method == 'POST':
-        name = request.form['name']
-        description = request.form['description']
-        price = float(request.form['price'])
-        image_url = request.form['image_url']
-        category = request.form['category']
+        try:
+            customer_name = request.form.get('customer_name', '').strip()
+            customer_phone = request.form.get('customer_phone', '').strip()
+            customer_address = request.form.get('customer_address', '').strip()
+            
+            # Validate
+            if not all([customer_name, customer_phone, customer_address]):
+                return render_template('customer/checkout.html', 
+                                     cart_items=cart_items,
+                                     error='Vui lòng điền đầy đủ thông tin')
+            
+            # Tạo đơn hàng
+            order_id = Order.create(customer_name, customer_phone, customer_address, cart_items)
+            
+            # Xóa giỏ hàng
+            session.pop('cart', None)
+            
+            return redirect(url_for('checkout_success', order_id=order_id))
         
-        Product.create(name, description, price, image_url, category)
-        return redirect(url_for('admin_products'))
+        except Exception as e:
+            return render_template('customer/checkout.html', 
+                                 cart_items=cart_items,
+                                 error=f'Có lỗi xảy ra: {str(e)}')
     
-    return render_template('admin/product_form.html')
-
-@app.route('/admin/products/edit/<int:product_id>', methods=['GET', 'POST'])
-def admin_edit_product(product_id):
-    product = Product.get_by_id(product_id)
-    if not product:
-        return redirect(url_for('admin_products'))
+    # GET request
+    subtotal = sum(item['price'] * item['quantity'] for item in cart_items)
+    shipping_fee = 0 if subtotal >= 100000 else 20000
+    total = subtotal + shipping_fee
     
-    if request.method == 'POST':
-        name = request.form['name']
-        description = request.form['description']
-        price = float(request.form['price'])
-        image_url = request.form['image_url']
-        category = request.form['category']
-        
-        Product.update(product_id, name, description, price, image_url, category)
-        return redirect(url_for('admin_products'))
-    
-    return render_template('admin/product_form.html', product=product)
+    return render_template('customer/checkout.html', 
+                         cart_items=cart_items,
+                         subtotal=subtotal,
+                         shipping_fee=shipping_fee,
+                         total=total)
 
-@app.route('/admin/products/delete/<int:product_id>')
-def admin_delete_product(product_id):
-    Product.delete(product_id)
-    return redirect(url_for('admin_products'))
-
-@app.route('/admin/orders')
-def admin_orders():
-    orders = Order.get_all()
-    return render_template('admin/orders.html', orders=orders)
-
-@app.route('/admin/orders/<int:order_id>')
-def admin_order_detail(order_id):
+@app.route('/checkout/success/<int:order_id>')
+def checkout_success(order_id):
+    """Trang thành công sau khi đặt hàng"""
     order, items = Order.get_by_id(order_id)
+    
     if not order:
-        return redirect(url_for('admin_orders'))
+        return redirect(url_for('index'))
     
-    return render_template('admin/order_detail.html', order=order, items=items)
+    return render_template('customer/checkout_success.html', 
+                         order=order, 
+                         items=items)
 
-@app.route('/admin/orders/update_status', methods=['POST'])
-def admin_update_order_status():
-    order_id = request.form['order_id']
-    status = request.form['status']
-    
-    Order.update_status(order_id, status)
-    return redirect(url_for('admin_order_detail', order_id=order_id))
+@app.route('/clear_cart')
+def clear_cart():
+    """Xóa toàn bộ giỏ hàng"""
+    session.pop('cart', None)
+    return redirect(url_for('cart'))
 
 if __name__ == '__main__':
     with app.app_context():
         init_db()
-    app.run(debug=True)
+    app.run(debug=True, port=5000, host='0.0.0.0')

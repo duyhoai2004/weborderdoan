@@ -1,128 +1,511 @@
-{% extends "base.html" %}
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard - Admin Panel{% endblock %}
 
 {% block content %}
-<div class="container-fluid my-4">
-    <h1 class="mb-4"><i class="fas fa-tachometer-alt"></i> Bảng điều khiển</h1>
-    
-    <!-- Thống kê -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4>{{ total_orders }}</h4>
-                            <p>Tổng đơn hàng</p>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-shopping-cart fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1"><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+            <p class="text-muted mb-0">Tổng quan hệ thống</p>
         </div>
-        <div class="col-md-4">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4>{{ pending_orders }}</h4>
-                            <p>Đơn hàng chờ xử lý</p>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-clock fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4>{{ total_products }}</h4>
-                            <p>Sản phẩm</p>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-box fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="text-muted">
+            <i class="fas fa-calendar"></i> <span id="currentDate"></span>
         </div>
     </div>
     
-    <div class="row">
-        <!-- Đơn hàng gần đây -->
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-list"></i> Đơn hàng gần đây</h5>
-                </div>
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card bg-primary text-white">
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Mã đơn</th>
-                                    <th>Khách hàng</th>
-                                    <th>Số điện thoại</th>
-                                    <th>Tổng tiền</th>
-                                    <th>Trạng thái</th>
-                                    <th>Thao tác</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for order in recent_orders %}
-                                <tr>
-                                    <td>#{{ order['id'] }}</td>
-                                    <td>{{ order['customer_name'] }}</td>
-                                    <td>{{ order['customer_phone'] }}</td>
-                                    <td>{{ "{:,.0f} VNĐ".format(order['total_amount']) }}</td>
-                                    <td>
-                                        <span class="badge {% if order['status'] == 'pending' %}bg-warning{% elif order['status'] == 'completed' %}bg-success{% else %}bg-secondary{% endif %}">
-                                            {{ order['status'] }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <a href="{{ url_for('admin_order_detail', order_id=order['id']) }}" class="btn btn-sm btn-primary">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="text-center mt-3">
-                        <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-primary">Xem tất cả đơn hàng</a>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-50 small mb-1">Tổng đơn hàng</div>
+                            <h2 class="mb-0">{{ stats['total'] }}</h2>
+                            <small>Tất cả thời gian</small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-shopping-bag"></i>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
         
-        <!-- Quick Actions -->
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-bolt"></i> Thao tác nhanh</h5>
-                </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card bg-warning text-white">
                 <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{{ url_for('admin_add_product') }}" class="btn btn-success">
-                            <i class="fas fa-plus"></i> Thêm sản phẩm mới
-                        </a>
-                        <a href="{{ url_for('admin_products') }}" class="btn btn-primary">
-                            <i class="fas fa-boxes"></i> Quản lý sản phẩm
-                        </a>
-                        <a href="{{ url_for('admin_orders') }}" class="btn btn-warning">
-                            <i class="fas fa-shopping-cart"></i> Quản lý đơn hàng
-                        </a>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-50 small mb-1">Chờ xử lý</div>
+                            <h2 class="mb-0">{{ stats['pending'] }}</h2>
+                            <small>Cần xử lý ngay</small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-50 small mb-1">Hoàn thành</div>
+                            <h2 class="mb-0">{{ stats['completed'] }}</h2>
+                            <small>Đơn thành công</small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-50 small mb-1">Doanh thu</div>
+                            <h3 class="mb-0">{{ "{:,.0f}".format(stats['revenue']) }}</h3>
+                            <small>VNĐ</small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    
+    <!-- Time-based Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-day fa-3x text-primary mb-3"></i>
+                    <h4>{{ orders_today }}</h4>
+                    <p class="text-muted mb-0">Đơn hàng hôm nay</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-week fa-3x text-success mb-3"></i>
+                    <h4>{{ orders_week }}</h4>
+                    <p class="text-muted mb-0">Đơn hàng tuần này</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-alt fa-3x text-info mb-3"></i>
+                    <h4>{{ orders_month }}</h4>
+                    <p class="text-muted mb-0">Đơn hàng tháng này</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="row mb-4">
+        <!-- Revenue Chart -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-chart-line text-primary"></i> Doanh thu 7 ngày qua</h5>
+                    <select id="revenueDays" class="form-select form-select-sm" style="width: auto;">
+                        <option value="7">7 ngày</option>
+                        <option value="14">14 ngày</option>
+                        <option value="30">30 ngày</option>
+                    </select>
+                </div>
+                <div class="card-body">
+                    <canvas id="revenueChart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Status Pie Chart -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie text-success"></i> Trạng thái đơn hàng</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Products & Recent Orders -->
+    <div class="row mb-4">
+        <!-- Top Products Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar text-warning"></i> Top sản phẩm bán chạy</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="topProductsChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Top Products Table -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-fire text-danger"></i> Món ăn bán chạy nhất</h5>
+                </div>
+                <div class="card-body">
+                    {% if top_products %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Sản phẩm</th>
+                                    <th class="text-center">Đã bán</th>
+                                    <th class="text-end">Doanh thu</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in top_products %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td><strong>{{ product['name'] }}</strong></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-success">{{ product['total_sold'] }}</span>
+                                    </td>
+                                    <td class="text-end">{{ "{:,.0f}".format(product['revenue']) }}₫</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-box-open fa-3x mb-3"></i>
+                        <p>Chưa có dữ liệu bán hàng</p>
+                        <small>Hoàn thành ít nhất 1 đơn hàng để xem thống kê</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="card mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0"><i class="fas fa-bolt text-warning"></i> Thao tác nhanh</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 mb-2">
+                    <a href="{{ url_for('add_product') }}" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-plus"></i> Thêm sản phẩm
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="{{ url_for('orders', status='pending') }}" class="btn btn-outline-warning w-100">
+                        <i class="fas fa-clock"></i> Đơn chờ xử lý
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="{{ url_for('products') }}" class="btn btn-outline-success w-100">
+                        <i class="fas fa-boxes"></i> Quản lý sản phẩm
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="http://localhost:5000" target="_blank" class="btn btn-outline-info w-100">
+                        <i class="fas fa-external-link-alt"></i> Xem trang web
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Orders -->
+    <div class="card">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-list"></i> Đơn hàng gần đây</h5>
+            <a href="{{ url_for('orders') }}" class="btn btn-sm btn-outline-primary">
+                Xem tất cả <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        <div class="card-body">
+            {% if recent_orders %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">Mã ĐH</th>
+                            <th>Khách hàng</th>
+                            <th>SĐT</th>
+                            <th>Tổng tiền</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày đặt</th>
+                            <th class="text-center">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr>
+                            <td><strong>#{{ order['id'] }}</strong></td>
+                            <td>
+                                <i class="fas fa-user text-muted me-1"></i>
+                                {{ order['customer_name'] }}
+                            </td>
+                            <td>{{ order['customer_phone'] }}</td>
+                            <td>
+                                <span class="badge bg-success badge-custom">
+                                    {{ "{:,.0f}".format(order['total_amount']) }}₫
+                                </span>
+                            </td>
+                            <td>
+                                {% if order['status'] == 'pending' %}
+                                <span class="badge bg-warning text-dark badge-custom">
+                                    <i class="fas fa-clock"></i> Chờ xử lý
+                                </span>
+                                {% elif order['status'] == 'processing' %}
+                                <span class="badge bg-info badge-custom">
+                                    <i class="fas fa-spinner"></i> Đang xử lý
+                                </span>
+                                {% elif order['status'] == 'completed' %}
+                                <span class="badge bg-success badge-custom">
+                                    <i class="fas fa-check-circle"></i> Hoàn thành
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger badge-custom">
+                                    <i class="fas fa-times-circle"></i> Đã hủy
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td><small>{{ order['created_at'] }}</small></td>
+                            <td class="text-center">
+                                <a href="{{ url_for('order_detail', order_id=order['id']) }}" 
+                                   class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-inbox fa-3x mb-3"></i>
+                <p>Chưa có đơn hàng nào</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// Hiển thị ngày hiện tại
+document.getElementById('currentDate').textContent = new Date().toLocaleDateString('vi-VN', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+});
+
+// Chart colors
+const chartColors = {
+    primary: '#667eea',
+    success: '#11998e',
+    warning: '#f093fb',
+    danger: '#ff6b6b',
+    info: '#4facfe'
+};
+
+// 1. Revenue Line Chart
+let revenueChart;
+
+async function loadRevenueChart(days = 7) {
+    try {
+        const response = await fetch(`/api/revenue-chart?days=${days}`);
+        const data = await response.json();
+        
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        
+        if (revenueChart) {
+            revenueChart.destroy();
+        }
+        
+        revenueChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Doanh thu (VNĐ)',
+                    data: data.data,
+                    borderColor: chartColors.primary,
+                    backgroundColor: chartColors.primary + '20',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Doanh thu: ' + context.parsed.y.toLocaleString('vi-VN') + '₫';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString('vi-VN') + '₫';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error loading revenue chart:', error);
+    }
+}
+
+// 2. Status Pie Chart
+async function loadStatusChart() {
+    try {
+        const response = await fetch('/api/status-chart');
+        const data = await response.json();
+        
+        const ctx = document.getElementById('statusChart').getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.data,
+                    backgroundColor: [
+                        chartColors.warning,
+                        chartColors.info,
+                        chartColors.success,
+                        chartColors.danger
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error loading status chart:', error);
+    }
+}
+
+// 3. Top Products Bar Chart
+async function loadTopProductsChart() {
+    try {
+        const response = await fetch('/api/top-products-chart?limit=10');
+        const data = await response.json();
+        
+        const ctx = document.getElementById('topProductsChart').getContext('2d');
+        
+        // Kiểm tra nếu không có dữ liệu
+        if (!data.labels || data.labels.length === 0) {
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#6c757d';
+            ctx.textAlign = 'center';
+            ctx.fillText('Chưa có dữ liệu', ctx.canvas.width / 2, ctx.canvas.height / 2);
+            return;
+        }
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Số lượng đã bán',
+                    data: data.data,
+                    backgroundColor: chartColors.success,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function(context) {
+                                const revenue = data.revenue[context.dataIndex];
+                                return 'Doanh thu: ' + revenue.toLocaleString('vi-VN') + '₫';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error loading top products chart:', error);
+    }
+}
+
+// Load all charts
+loadRevenueChart(7);
+loadStatusChart();
+loadTopProductsChart();
+
+// Revenue days selector
+document.getElementById('revenueDays').addEventListener('change', function() {
+    loadRevenueChart(this.value);
+});
+</script>
 {% endblock %}

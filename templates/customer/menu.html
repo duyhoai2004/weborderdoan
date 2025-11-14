@@ -1,0 +1,157 @@
+{% extends "customer/base.html" %}
+
+{% block title %}Thực đơn - FoodOrder{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="text-center mb-4">Thực đơn</h1>
+    
+    <!-- Search and Filter -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <form method="GET" action="{{ url_for('menu') }}">
+                <div class="input-group">
+                    <input type="text" class="form-control" name="search" 
+                           placeholder="Tìm kiếm món ăn..." 
+                           value="{{ search_query if search_query else '' }}">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-search"></i> Tìm kiếm
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ url_for('menu') }}" 
+                   class="btn {% if not selected_category %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Tất cả
+                </a>
+                {% for category in categories %}
+                <a href="{{ url_for('menu', category=category) }}" 
+                   class="btn {% if selected_category == category %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    {{ category }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Products Grid -->
+    {% if products %}
+    <div class="row">
+        {% for product in products %}
+        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+            <div class="card h-100">
+                <div style="overflow: hidden; height: 220px;">
+                    <img src="{{ product['image_url'] }}" 
+                         class="card-img-top w-100 h-100" 
+                         alt="{{ product['name'] }}"
+                         style="object-fit: cover;">
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <div class="mb-2">
+                        <span class="category-badge">{{ product['category'] }}</span>
+                    </div>
+                    <h5 class="card-title">{{ product['name'] }}</h5>
+                    <p class="card-text text-muted small flex-grow-1">
+                        {{ product['description'][:80] }}{% if product['description']|length > 80 %}...{% endif %}
+                    </p>
+                    <div class="mb-3">
+                        <span class="price-tag">{{ "{:,.0f}".format(product['price']) }}₫</span>
+                    </div>
+                    
+                    <form method="POST" action="{{ url_for('add_to_cart') }}" class="add-to-cart-form">
+                        <input type="hidden" name="product_id" value="{{ product['id'] }}">
+                        <div class="input-group mb-2">
+                            <button type="button" class="btn btn-outline-secondary btn-decrease">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <input type="number" class="form-control text-center quantity-input" 
+                                   name="quantity" value="1" min="1" max="99">
+                            <button type="button" class="btn btn-outline-secondary btn-increase">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-cart-plus"></i> Thêm vào giỏ
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-search fa-5x text-muted mb-3"></i>
+        <h3 class="text-muted">Không tìm thấy sản phẩm</h3>
+        <p class="text-muted">Vui lòng thử tìm kiếm với từ khóa khác</p>
+        <a href="{{ url_for('menu') }}" class="btn btn-primary mt-3">
+            Xem tất cả món ăn
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Xử lý nút tăng/giảm số lượng
+    document.querySelectorAll('.btn-increase').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const input = this.closest('.input-group').querySelector('.quantity-input');
+            let value = parseInt(input.value);
+            if (value < 99) {
+                input.value = value + 1;
+            }
+        });
+    });
+    
+    document.querySelectorAll('.btn-decrease').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const input = this.closest('.input-group').querySelector('.quantity-input');
+            let value = parseInt(input.value);
+            if (value > 1) {
+                input.value = value - 1;
+            }
+        });
+    });
+    
+    // Xử lý form thêm vào giỏ hàng
+    document.querySelectorAll('.add-to-cart-form').forEach(form => {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const response = await fetch(this.action, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast(result.message, 'success');
+                
+                // Cập nhật số lượng trong giỏ hàng
+                const cartBadge = document.querySelector('.cart-badge');
+                if (cartBadge) {
+                    cartBadge.textContent = result.cart_count;
+                } else if (result.cart_count > 0) {
+                    const cartLink = document.querySelector('a[href*="cart"]');
+                    const badge = document.createElement('span');
+                    badge.className = 'cart-badge';
+                    badge.textContent = result.cart_count;
+                    cartLink.appendChild(badge);
+                }
+                
+                // Reset quantity về 1
+                this.querySelector('.quantity-input').value = 1;
+            } else {
+                showToast(result.message, 'danger');
+            }
+        });
+    });
+</script>
+{% endblock %}

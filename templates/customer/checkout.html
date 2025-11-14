@@ -1,0 +1,165 @@
+{% extends "customer/base.html" %}
+
+{% block title %}Thanh toán - FoodOrder{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="text-center mb-4">Thanh toán</h1>
+    
+    {% if error %}
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="fas fa-exclamation-circle"></i> {{ error }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+    
+    <div class="row">
+        <!-- Checkout Form -->
+        <div class="col-lg-7 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-user"></i> Thông tin giao hàng</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="customer_name" class="form-label">
+                                Họ và tên <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control form-control-lg" 
+                                   id="customer_name" name="customer_name" 
+                                   placeholder="Nguyễn Văn A" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="customer_phone" class="form-label">
+                                Số điện thoại <span class="text-danger">*</span>
+                            </label>
+                            <input type="tel" class="form-control form-control-lg" 
+                                   id="customer_phone" name="customer_phone" 
+                                   placeholder="0123456789" 
+                                   pattern="[0-9]{10,11}" required>
+                            <div class="form-text">Nhập 10-11 số</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="customer_address" class="form-label">
+                                Địa chỉ giao hàng <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="customer_address" 
+                                      name="customer_address" rows="3" 
+                                      placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố" 
+                                      required></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="note" class="form-label">Ghi chú (Tùy chọn)</label>
+                            <textarea class="form-control" id="note" 
+                                      name="note" rows="2" 
+                                      placeholder="Ghi chú thêm về đơn hàng (nếu có)"></textarea>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="mb-3">
+                            <h6 class="mb-3"><i class="fas fa-credit-card"></i> Phương thức thanh toán</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" 
+                                       name="payment_method" id="cod" value="cod" checked>
+                                <label class="form-check-label" for="cod">
+                                    <i class="fas fa-money-bill-wave text-success"></i> 
+                                    Thanh toán khi nhận hàng (COD)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" 
+                                       name="payment_method" id="bank" value="bank" disabled>
+                                <label class="form-check-label text-muted" for="bank">
+                                    <i class="fas fa-university"></i> 
+                                    Chuyển khoản ngân hàng (Sắp ra mắt)
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-check-circle"></i> Hoàn tất đặt hàng
+                            </button>
+                            <a href="{{ url_for('cart') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Quay lại giỏ hàng
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Summary -->
+        <div class="col-lg-5">
+            <div class="card sticky-top" style="top: 100px;">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-shopping-bag"></i> Đơn hàng của bạn</h5>
+                </div>
+                <div class="card-body">
+                    <div class="order-items" style="max-height: 300px; overflow-y: auto;">
+                        {% for item in cart_items %}
+                        <div class="d-flex mb-3 pb-3 border-bottom">
+                            <img src="{{ item['image_url'] }}" 
+                                 alt="{{ item['name'] }}" 
+                                 class="rounded me-3" 
+                                 style="width: 60px; height: 60px; object-fit: cover;">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ item['name'] }}</h6>
+                                <small class="text-muted">
+                                    {{ "{:,.0f}".format(item['price']) }}₫ x {{ item['quantity'] }}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <strong>{{ "{:,.0f}".format(item['price'] * item['quantity']) }}₫</strong>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Tạm tính:</span>
+                            <strong>{{ "{:,.0f}".format(subtotal) }}₫</strong>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Phí giao hàng:</span>
+                            <strong class="{% if shipping_fee == 0 %}text-success{% endif %}">
+                                {% if shipping_fee == 0 %}
+                                Miễn phí
+                                {% else %}
+                                {{ "{:,.0f}".format(shipping_fee) }}₫
+                                {% endif %}
+                            </strong>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="d-flex justify-content-between">
+                            <h5>Tổng cộng:</h5>
+                            <h4 class="text-danger">{{ "{:,.0f}".format(total) }}₫</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6 class="mb-3"><i class="fas fa-shield-alt text-success"></i> Chính sách</h6>
+                    <ul class="small mb-0">
+                        <li>Miễn phí giao hàng cho đơn từ 100.000₫</li>
+                        <li>Giao hàng trong vòng 30-45 phút</li>
+                        <li>Hỗ trợ đổi trả trong 24h nếu có vấn đề</li>
+                        <li>Thanh toán an toàn và bảo mật</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

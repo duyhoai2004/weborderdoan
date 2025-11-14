@@ -1,63 +1,191 @@
-{% extends "base.html" %}
+{% extends "admin/base.html" %}
+
+{% block title %}{% if product %}Sửa sản phẩm{% else %}Thêm sản phẩm{% endif %} - Admin{% endblock %}
 
 {% block content %}
-<div class="container my-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">
+                <i class="fas fa-{% if product %}edit{% else %}plus{% endif %}"></i>
+                {% if product %}Sửa sản phẩm{% else %}Thêm sản phẩm mới{% endif %}
+            </h1>
+            <p class="text-muted mb-0">
+                {% if product %}Cập nhật thông tin sản phẩm{% else %}Điền thông tin sản phẩm{% endif %}
+            </p>
+        </div>
+        <a href="{{ url_for('products') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Quay lại
+        </a>
+    </div>
+    
+    <div class="row">
+        <!-- Form Column -->
+        <div class="col-lg-8 mb-4">
             <div class="card">
-                <div class="card-header">
-                    <h4 class="mb-0">
-                        <i class="fas {% if product %}fa-edit{% else %}fa-plus{% endif %}"></i>
-                        {% if product %}Chỉnh sửa sản phẩm{% else %}Thêm sản phẩm mới{% endif %}
-                    </h4>
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Thông tin sản phẩm</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST">
+                    <form method="POST" id="productForm">
                         <div class="mb-3">
-                            <label for="name" class="form-label">Tên sản phẩm *</label>
-                            <input type="text" class="form-control" id="name" name="name" 
-                                   value="{{ product['name'] if product }}" required>
+                            <label for="name" class="form-label">
+                                Tên sản phẩm <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control form-control-lg" 
+                                   id="name" name="name" 
+                                   value="{% if product %}{{ product['name'] }}{% endif %}"
+                                   placeholder="Ví dụ: Pizza Hải Sản"
+                                   required>
                         </div>
                         
                         <div class="mb-3">
                             <label for="description" class="form-label">Mô tả</label>
-                            <textarea class="form-control" id="description" name="description" rows="3">{{ product['description'] if product }}</textarea>
+                            <textarea class="form-control" id="description" 
+                                      name="description" rows="4"
+                                      placeholder="Mô tả chi tiết về sản phẩm">{% if product %}{{ product['description'] }}{% endif %}</textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="price" class="form-label">
+                                    Giá (VNĐ) <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control form-control-lg" 
+                                       id="price" name="price" 
+                                       value="{% if product %}{{ product['price'] }}{% endif %}"
+                                       placeholder="0" min="0" step="1000" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="category" class="form-label">
+                                    Danh mục <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select form-select-lg" 
+                                        id="category" name="category" required>
+                                    <option value="">-- Chọn danh mục --</option>
+                                    <option value="Pizza" {% if product and product['category'] == 'Pizza' %}selected{% endif %}>Pizza</option>
+                                    <option value="Burger" {% if product and product['category'] == 'Burger' %}selected{% endif %}>Burger</option>
+                                    <option value="Gà rán" {% if product and product['category'] == 'Gà rán' %}selected{% endif %}>Gà rán</option>
+                                    <option value="Đồ uống" {% if product and product['category'] == 'Đồ uống' %}selected{% endif %}>Đồ uống</option>
+                                    <option value="Món Việt" {% if product and product['category'] == 'Món Việt' %}selected{% endif %}>Món Việt</option>
+                                    <option value="Ăn Vặt" {% if product and product['category'] == 'Món Nhật' %}selected{% endif %}>Ăn Vặt</option>
+                                    <option value="Khác" {% if product and product['category'] == 'Khác' %}selected{% endif %}>Khác</option>
+                                </select>
+                            </div>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="price" class="form-label">Giá *</label>
-                            <input type="number" class="form-control" id="price" name="price" 
-                                   value="{{ product['price'] if product }}" min="0" step="1000" required>
+                            <label for="image_url" class="form-label">
+                                URL hình ảnh <span class="text-danger">*</span>
+                            </label>
+                            <input type="url" class="form-control" 
+                                   id="image_url" name="image_url" 
+                                   value="{% if product %}{{ product['image_url'] }}{% endif %}"
+                                   placeholder="https://example.com/image.jpg" required>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i>
+                                Nhập URL hình ảnh từ internet (Unsplash, ImgBB, Cloudinary, v.v.)
+                            </small>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="image_url" class="form-label">URL hình ảnh</label>
-                            <input type="url" class="form-control" id="image_url" name="image_url" 
-                                   value="{{ product['image_url'] if product }}"
-                                   placeholder="https://example.com/image.jpg">
-                            <div class="form-text">Có thể sử dụng link hình ảnh từ internet</div>
-                        </div>
+                        <hr>
                         
-                        <div class="mb-3">
-                            <label for="category" class="form-label">Danh mục *</label>
-                            <input type="text" class="form-control" id="category" name="category" 
-                                   value="{{ product['category'] if product }}" required
-                                   placeholder="Ví dụ: Pizza, Burger, Đồ uống...">
-                        </div>
-                        
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-save"></i> 
-                                {% if product %}Cập nhật{% else %}Thêm sản phẩm{% endif %}
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-lg btn-secondary" 
+                                    onclick="window.history.back()">
+                                <i class="fas fa-times"></i> Hủy
                             </button>
-                            <a href="{{ url_for('admin_products') }}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Quay lại
-                            </a>
+                            <button type="submit" class="btn btn-lg btn-primary">
+                                <i class="fas fa-save"></i> 
+                                {% if product %}Cập nhật{% else %}Thêm mới{% endif %}
+                            </button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
+        
+        <!-- Preview Column -->
+        <div class="col-lg-4">
+            <div class="card sticky-top" style="top: 100px;">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-eye"></i> Xem trước</h5>
+                </div>
+                <div class="card-body text-center">
+                    <img id="preview_image" 
+                         src="{% if product %}{{ product['image_url'] }}{% else %}https://via.placeholder.com/300x200?text=Preview{% endif %}" 
+                         alt="Preview" 
+                         class="img-fluid rounded mb-3"
+                         style="max-height: 250px; width: 100%; object-fit: cover;">
+                    
+                    <span id="preview_category" class="badge bg-primary badge-custom mb-2">
+                        {% if product %}{{ product['category'] }}{% else %}Danh mục{% endif %}
+                    </span>
+                    
+                    <h5 id="preview_name">
+                        {% if product %}{{ product['name'] }}{% else %}Tên sản phẩm{% endif %}
+                    </h5>
+                    
+                    <p id="preview_description" class="text-muted small">
+                        {% if product %}{{ product['description'] }}{% else %}Mô tả sản phẩm sẽ hiển thị ở đây{% endif %}
+                    </p>
+                    
+                    <h4 id="preview_price" class="text-danger mb-0">
+                        {% if product %}{{ "{:,.0f}".format(product['price']) }}{% else %}0{% endif %}₫
+                    </h4>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6 class="mb-3">
+                        <i class="fas fa-lightbulb text-warning"></i> Gợi ý
+                    </h6>
+                    <ul class="small mb-0">
+                        <li>Sử dụng ảnh chất lượng cao, rõ nét</li>
+                        <li>Mô tả ngắn gọn, hấp dẫn</li>
+                        <li>Giá cả hợp lý, dễ nhớ</li>
+                        <li>Phân loại đúng danh mục</li>
+                        <li>URL ảnh nên từ nguồn tin cậy</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Real-time preview
+document.getElementById('name').addEventListener('input', function(e) {
+    document.getElementById('preview_name').textContent = e.target.value || 'Tên sản phẩm';
+});
+
+document.getElementById('description').addEventListener('input', function(e) {
+    document.getElementById('preview_description').textContent = e.target.value || 'Mô tả sản phẩm sẽ hiển thị ở đây';
+});
+
+document.getElementById('price').addEventListener('input', function(e) {
+    const price = parseFloat(e.target.value) || 0;
+    document.getElementById('preview_price').textContent = price.toLocaleString('vi-VN') + '₫';
+});
+
+document.getElementById('category').addEventListener('change', function(e) {
+    document.getElementById('preview_category').textContent = e.target.value || 'Danh mục';
+});
+
+document.getElementById('image_url').addEventListener('input', function(e) {
+    const img = document.getElementById('preview_image');
+    if (e.target.value) {
+        img.src = e.target.value;
+        img.onerror = function() {
+            this.src = 'https://via.placeholder.com/300x200?text=Invalid+URL';
+        };
+    } else {
+        img.src = 'https://via.placeholder.com/300x200?text=Preview';
+    }
+});
+</script>
 {% endblock %}

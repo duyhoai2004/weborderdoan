@@ -1,51 +1,133 @@
-{% extends "base.html" %}
+{% extends "admin/base.html" %}
+
+{% block title %}Quản lý sản phẩm - Admin{% endblock %}
 
 {% block content %}
-<div class="container-fluid my-4">
+<div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1><i class="fas fa-boxes"></i> Quản lý sản phẩm</h1>
-        <a href="{{ url_for('admin_add_product') }}" class="btn btn-success">
+        <div>
+            <h1 class="mb-1"><i class="fas fa-boxes"></i> Quản lý sản phẩm</h1>
+            <p class="text-muted mb-0">Tổng số: <strong>{{ products|length }}</strong> sản phẩm</p>
+        </div>
+        <a href="{{ url_for('add_product') }}" class="btn btn-success btn-lg">
             <i class="fas fa-plus"></i> Thêm sản phẩm
         </a>
     </div>
     
+    <!-- Search and Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    <form method="GET" action="{{ url_for('products') }}">
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="search" 
+                                   placeholder="Tìm kiếm sản phẩm..." 
+                                   value="{{ search_query if search_query else '' }}">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i> Tìm kiếm
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ url_for('products') }}" 
+                           class="btn btn-sm {% if not selected_category %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            Tất cả
+                        </a>
+                        {% for category in categories %}
+                        <a href="{{ url_for('products', category=category) }}" 
+                           class="btn btn-sm {% if selected_category == category %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            {{ category }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Products Table -->
     <div class="card">
         <div class="card-body">
+            {% if products %}
             <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
                         <tr>
-                            <th>Hình ảnh</th>
+                            <th style="width: 80px;">Ảnh</th>
                             <th>Tên sản phẩm</th>
                             <th>Mô tả</th>
-                            <th>Giá</th>
-                            <th>Danh mục</th>
-                            <th>Thao tác</th>
+                            <th style="width: 120px;">Giá</th>
+                            <th style="width: 120px;">Danh mục</th>
+                            <th style="width: 120px;" class="text-center">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for product in products %}
                         <tr>
                             <td>
-                                <img src="{{ product['image_url'] }}" alt="{{ product['name'] }}" style="width: 50px; height: 50px; object-fit: cover;">
+                                <img src="{{ product['image_url'] }}" 
+                                     alt="{{ product['name'] }}" 
+                                     class="img-thumbnail"
+                                     style="width: 60px; height: 60px; object-fit: cover;">
                             </td>
-                            <td>{{ product['name'] }}</td>
-                            <td>{{ product['description'] }}</td>
-                            <td>{{ "{:,.0f} VNĐ".format(product['price']) }}</td>
-                            <td>{{ product['category'] }}</td>
                             <td>
-                                <a href="{{ url_for('admin_edit_product', product_id=product['id']) }}" class="btn btn-sm btn-warning">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <a href="{{ url_for('admin_delete_product', product_id=product['id']) }}" class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')">
-                                    <i class="fas fa-trash"></i>
-                                </a>
+                                <strong>{{ product['name'] }}</strong>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {{ product['description'][:70] }}{% if product['description']|length > 70 %}...{% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <span class="badge bg-success badge-custom">
+                                    {{ "{:,.0f}".format(product['price']) }}₫
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary badge-custom">
+                                    {{ product['category'] }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('edit_product', product_id=product['id']) }}" 
+                                       class="btn btn-sm btn-warning" 
+                                       title="Sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{{ url_for('delete_product', product_id=product['id']) }}" 
+                                       class="btn btn-sm btn-danger" 
+                                       onclick="return confirm('Bạn có chắc chắn muốn xóa sản phẩm \'{{ product['name'] }}\'?')"
+                                       title="Xóa">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-box-open fa-5x mb-3"></i>
+                <h4>Không tìm thấy sản phẩm</h4>
+                <p>{% if search_query %}Không có sản phẩm nào khớp với từ khóa "{{ search_query }}"{% else %}Chưa có sản phẩm nào trong hệ thống{% endif %}</p>
+                {% if search_query %}
+                <a href="{{ url_for('products') }}" class="btn btn-primary mt-2">
+                    Xem tất cả sản phẩm
+                </a>
+                {% else %}
+                <a href="{{ url_for('add_product') }}" class="btn btn-success mt-2">
+                    <i class="fas fa-plus"></i> Thêm sản phẩm đầu tiên
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

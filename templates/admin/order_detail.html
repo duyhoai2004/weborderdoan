@@ -1,119 +1,197 @@
-{% extends "base.html" %}
+{% extends "admin/base.html" %}
+
+{% block title %}Chi tiết đơn hàng #{{ order['id'] }} - Admin{% endblock %}
 
 {% block content %}
-<div class="container-fluid my-4">
+<div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1><i class="fas fa-file-invoice"></i> Chi tiết đơn hàng #{{ order['id'] }}</h1>
-        <a href="{{ url_for('admin_orders') }}" class="btn btn-secondary">
+        <div>
+            <h1 class="mb-1"><i class="fas fa-receipt"></i> Chi tiết đơn hàng #{{ order['id'] }}</h1>
+            <p class="text-muted mb-0">Ngày đặt: {{ order['created_at'] }}</p>
+        </div>
+        <a href="{{ url_for('orders') }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Quay lại
         </a>
     </div>
     
     <div class="row">
-        <div class="col-md-8">
-            <!-- Thông tin đơn hàng -->
+        <!-- Customer Info & Status -->
+        <div class="col-lg-4 mb-4">
+            <!-- Customer Information -->
             <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Thông tin đơn hàng</h5>
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-user"></i> Thông tin khách hàng</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>Mã đơn hàng:</strong> #{{ order['id'] }}</p>
-                            <p><strong>Ngày đặt:</strong> {{ order['created_at'] }}</p>
-                            <p><strong>Trạng thái:</strong> 
-                                <span class="badge {% if order['status'] == 'pending' %}bg-warning{% elif order['status'] == 'completed' %}bg-success{% elif order['status'] == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
-                                    {{ order['status'] }}
-                                </span>
-                            </p>
+                    <div class="mb-3">
+                        <label class="text-muted small mb-1">Họ tên</label>
+                        <div class="fw-bold">{{ order['customer_name'] }}</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="text-muted small mb-1">Số điện thoại</label>
+                        <div class="fw-bold">
+                            <i class="fas fa-phone text-success"></i> 
+                            <a href="tel:{{ order['customer_phone'] }}" class="text-decoration-none">
+                                {{ order['customer_phone'] }}
+                            </a>
                         </div>
-                        <div class="col-md-6">
-                            <p><strong>Tổng tiền:</strong> {{ "{:,.0f} VNĐ".format(order['total_amount']) }}</p>
+                    </div>
+                    
+                    <div class="mb-0">
+                        <label class="text-muted small mb-1">Địa chỉ giao hàng</label>
+                        <div class="fw-bold">
+                            <i class="fas fa-map-marker-alt text-danger"></i>
+                            {{ order['customer_address'] }}
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Sản phẩm trong đơn hàng -->
+            <!-- Update Status -->
             <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Sản phẩm</h5>
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-sync-alt"></i> Cập nhật trạng thái</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('update_order_status') }}">
+                        <input type="hidden" name="order_id" value="{{ order['id'] }}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Trạng thái hiện tại:</label>
+                            <div>
+                                {% if order['status'] == 'pending' %}
+                                <span class="badge bg-warning text-dark badge-custom">
+                                    <i class="fas fa-clock"></i> Chờ xử lý
+                                </span>
+                                {% elif order['status'] == 'processing' %}
+                                <span class="badge bg-info badge-custom">
+                                    <i class="fas fa-spinner"></i> Đang xử lý
+                                </span>
+                                {% elif order['status'] == 'completed' %}
+                                <span class="badge bg-success badge-custom">
+                                    <i class="fas fa-check-circle"></i> Hoàn thành
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger badge-custom">
+                                    <i class="fas fa-times-circle"></i> Đã hủy
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Đổi sang:</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="pending" {% if order['status'] == 'pending' %}selected{% endif %}>
+                                    Chờ xử lý
+                                </option>
+                                <option value="processing" {% if order['status'] == 'processing' %}selected{% endif %}>
+                                    Đang xử lý
+                                </option>
+                                <option value="completed" {% if order['status'] == 'completed' %}selected{% endif %}>
+                                    Hoàn thành
+                                </option>
+                                <option value="cancelled" {% if order['status'] == 'cancelled' %}selected{% endif %}>
+                                    Đã hủy
+                                </option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-save"></i> Cập nhật trạng thái
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Items -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-box"></i> Chi tiết sản phẩm</h5>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
+                        <table class="table align-middle">
+                            <thead class="table-light">
                                 <tr>
-                                    <th>Hình ảnh</th>
-                                    <th>Tên sản phẩm</th>
-                                    <th>Giá</th>
-                                    <th>Số lượng</th>
-                                    <th>Thành tiền</th>
+                                    <th style="width: 80px;">Ảnh</th>
+                                    <th>Sản phẩm</th>
+                                    <th style="width: 100px;" class="text-center">SL</th>
+                                    <th style="width: 120px;" class="text-end">Đơn giá</th>
+                                    <th style="width: 140px;" class="text-end">Thành tiền</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for item in items %}
                                 <tr>
                                     <td>
-                                        <img src="{{ item['image_url'] }}" alt="{{ item['name'] }}" 
-                                             style="width: 50px; height: 50px; object-fit: cover;">
+                                        <img src="{{ item['image_url'] }}" 
+                                             alt="{{ item['name'] }}" 
+                                             class="img-thumbnail"
+                                             style="width: 60px; height: 60px; object-fit: cover;">
                                     </td>
-                                    <td>{{ item['name'] }}</td>
-                                    <td>{{ "{:,.0f} VNĐ".format(item['price']) }}</td>
-                                    <td>{{ item['quantity'] }}</td>
-                                    <td>{{ "{:,.0f} VNĐ".format(item['price'] * item['quantity']) }}</td>
+                                    <td>
+                                        <strong>{{ item['name'] }}</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary badge-custom">
+                                            x{{ item['quantity'] }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        {{ "{:,.0f}".format(item['price']) }}₫
+                                    </td>
+                                    <td class="text-end">
+                                        <strong>{{ "{:,.0f}".format(item['price'] * item['quantity']) }}₫</strong>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot>
-                                <tr>
-                                    <td colspan="4" class="text-end"><strong>Tổng cộng:</strong></td>
-                                    <td><strong>{{ "{:,.0f} VNĐ".format(order['total_amount']) }}</strong></td>
+                                <tr class="table-light">
+                                    <td colspan="4" class="text-end">
+                                        <h5 class="mb-0">Tổng cộng:</h5>
+                                    </td>
+                                    <td class="text-end">
+                                        <h4 class="mb-0 text-danger">
+                                            {{ "{:,.0f}".format(order['total_amount']) }}₫
+                                        </h4>
+                                    </td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-md-4">
-            <!-- Thông tin khách hàng -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Thông tin khách hàng</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Họ tên:</strong> {{ order['customer_name'] }}</p>
-                    <p><strong>Số điện thoại:</strong> {{ order['customer_phone'] }}</p>
-                    <p><strong>Địa chỉ:</strong> {{ order['customer_address'] }}</p>
-                </div>
-            </div>
             
-            <!-- Cập nhật trạng thái -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Cập nhật trạng thái</h5>
-                </div>
+            <!-- Quick Actions -->
+            <div class="card mt-4">
                 <div class="card-body">
-                    <form method="POST" action="{{ url_for('admin_update_order_status') }}">
-                        <input type="hidden" name="order_id" value="{{ order['id'] }}">
-                        <div class="mb-3">
-                            <select name="status" class="form-select">
-                                <option value="pending" {% if order['status'] == 'pending' %}selected{% endif %}>Chờ xử lý</option>
-                                <option value="confirmed" {% if order['status'] == 'confirmed' %}selected{% endif %}>Đã xác nhận</option>
-                                <option value="delivering" {% if order['status'] == 'delivering' %}selected{% endif %}>Đang giao hàng</option>
-                                <option value="completed" {% if order['status'] == 'completed' %}selected{% endif %}>Hoàn thành</option>
-                                <option value="cancelled" {% if order['status'] == 'cancelled' %}selected{% endif %}>Đã hủy</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-save"></i> Cập nhật
+                    <h6 class="mb-3"><i class="fas fa-phone-alt text-success"></i> Thao tác nhanh</h6>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="tel:{{ order['customer_phone'] }}" class="btn btn-success">
+                            <i class="fas fa-phone"></i> Gọi khách hàng
+                        </a>
+                        <a href="sms:{{ order['customer_phone'] }}" class="btn btn-info">
+                            <i class="fas fa-sms"></i> Nhắn tin
+                        </a>
+                        <button onclick="window.print()" class="btn btn-secondary">
+                            <i class="fas fa-print"></i> In đơn hàng
                         </button>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+@media print {
+    .sidebar, .btn, .card-header { display: none !important; }
+    .main-content { margin-left: 0 !important; }
+}
+</style>
 {% endblock %}

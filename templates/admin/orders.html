@@ -1,41 +1,119 @@
-{% extends "base.html" %}
+{% extends "admin/base.html" %}
+
+{% block title %}Quản lý đơn hàng - Admin{% endblock %}
 
 {% block content %}
-<div class="container-fluid my-4">
-    <h1 class="mb-4"><i class="fas fa-shopping-cart"></i> Quản lý đơn hàng</h1>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1"><i class="fas fa-shopping-bag"></i> Quản lý đơn hàng</h1>
+            <p class="text-muted mb-0">Tổng số: <strong>{{ orders|length }}</strong> đơn hàng</p>
+        </div>
+        <div>
+            <span class="badge bg-warning text-dark badge-custom me-2">
+                <i class="fas fa-clock"></i> Chờ: {{ orders|selectattr('status', 'equalto', 'pending')|list|length }}
+            </span>
+            <span class="badge bg-info badge-custom me-2">
+                <i class="fas fa-spinner"></i> Xử lý: {{ orders|selectattr('status', 'equalto', 'processing')|list|length }}
+            </span>
+            <span class="badge bg-success badge-custom">
+                <i class="fas fa-check"></i> Hoàn thành: {{ orders|selectattr('status', 'equalto', 'completed')|list|length }}
+            </span>
+        </div>
+    </div>
     
+    <!-- Filter by Status -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ url_for('orders') }}" 
+                   class="btn btn-sm {% if not status_filter %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    <i class="fas fa-list"></i> Tất cả
+                </a>
+                <a href="{{ url_for('orders', status='pending') }}" 
+                   class="btn btn-sm {% if status_filter == 'pending' %}btn-warning text-dark{% else %}btn-outline-warning{% endif %}">
+                    <i class="fas fa-clock"></i> Chờ xử lý
+                </a>
+                <a href="{{ url_for('orders', status='processing') }}" 
+                   class="btn btn-sm {% if status_filter == 'processing' %}btn-info{% else %}btn-outline-info{% endif %}">
+                    <i class="fas fa-spinner"></i> Đang xử lý
+                </a>
+                <a href="{{ url_for('orders', status='completed') }}" 
+                   class="btn btn-sm {% if status_filter == 'completed' %}btn-success{% else %}btn-outline-success{% endif %}">
+                    <i class="fas fa-check-circle"></i> Hoàn thành
+                </a>
+                <a href="{{ url_for('orders', status='cancelled') }}" 
+                   class="btn btn-sm {% if status_filter == 'cancelled' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                    <i class="fas fa-times-circle"></i> Đã hủy
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Orders Table -->
     <div class="card">
         <div class="card-body">
+            {% if orders %}
             <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
                         <tr>
-                            <th>Mã đơn</th>
+                            <th style="width: 80px;">Mã ĐH</th>
                             <th>Khách hàng</th>
                             <th>Số điện thoại</th>
                             <th>Địa chỉ</th>
-                            <th>Tổng tiền</th>
-                            <th>Trạng thái</th>
-                            <th>Ngày đặt</th>
-                            <th>Thao tác</th>
+                            <th style="width: 130px;">Tổng tiền</th>
+                            <th style="width: 140px;">Trạng thái</th>
+                            <th style="width: 160px;">Ngày đặt</th>
+                            <th style="width: 100px;" class="text-center">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for order in orders %}
                         <tr>
-                            <td>#{{ order['id'] }}</td>
-                            <td>{{ order['customer_name'] }}</td>
-                            <td>{{ order['customer_phone'] }}</td>
-                            <td>{{ order['customer_address'] }}</td>
-                            <td>{{ "{:,.0f} VNĐ".format(order['total_amount']) }}</td>
+                            <td><strong>#{{ order['id'] }}</strong></td>
                             <td>
-                                <span class="badge {% if order['status'] == 'pending' %}bg-warning{% elif order['status'] == 'completed' %}bg-success{% elif order['status'] == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
-                                    {{ order['status'] }}
+                                <i class="fas fa-user text-primary me-1"></i>
+                                <strong>{{ order['customer_name'] }}</strong>
+                            </td>
+                            <td>
+                                <i class="fas fa-phone text-success me-1"></i>
+                                {{ order['customer_phone'] }}
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                    {{ order['customer_address'][:40] }}{% if order['customer_address']|length > 40 %}...{% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <span class="badge bg-success badge-custom">
+                                    {{ "{:,.0f}".format(order['total_amount']) }}₫
                                 </span>
                             </td>
-                            <td>{{ order['created_at'] }}</td>
                             <td>
-                                <a href="{{ url_for('admin_order_detail', order_id=order['id']) }}" class="btn btn-sm btn-primary">
+                                {% if order['status'] == 'pending' %}
+                                <span class="badge bg-warning text-dark badge-custom">
+                                    <i class="fas fa-clock"></i> Chờ xử lý
+                                </span>
+                                {% elif order['status'] == 'processing' %}
+                                <span class="badge bg-info badge-custom">
+                                    <i class="fas fa-spinner"></i> Đang xử lý
+                                </span>
+                                {% elif order['status'] == 'completed' %}
+                                <span class="badge bg-success badge-custom">
+                                    <i class="fas fa-check-circle"></i> Hoàn thành
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger badge-custom">
+                                    <i class="fas fa-times-circle"></i> Đã hủy
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td><small>{{ order['created_at'] }}</small></td>
+                            <td class="text-center">
+                                <a href="{{ url_for('order_detail', order_id=order['id']) }}" 
+                                   class="btn btn-sm btn-primary">
                                     <i class="fas fa-eye"></i> Chi tiết
                                 </a>
                             </td>
@@ -44,6 +122,18 @@
                     </tbody>
                 </table>
             </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-shopping-bag fa-5x mb-3"></i>
+                <h4>Không có đơn hàng</h4>
+                <p>{% if status_filter %}Không có đơn hàng nào với trạng thái này{% else %}Chưa có đơn hàng nào trong hệ thống{% endif %}</p>
+                {% if status_filter %}
+                <a href="{{ url_for('orders') }}" class="btn btn-primary mt-2">
+                    Xem tất cả đơn hàng
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

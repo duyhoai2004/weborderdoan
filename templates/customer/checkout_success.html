@@ -1,0 +1,149 @@
+{% extends "customer/base.html" %}
+
+{% block title %}Đặt hàng thành công - FoodOrder{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Success Message -->
+            <div class="text-center mb-5">
+                <div class="mb-4">
+                    <i class="fas fa-check-circle text-success" style="font-size: 5rem;"></i>
+                </div>
+                <h1 class="text-success mb-3">Đặt hàng thành công!</h1>
+                <p class="lead text-muted">Cảm ơn bạn đã đặt hàng. Chúng tôi sẽ liên hệ với bạn sớm nhất.</p>
+            </div>
+            
+            <!-- Order Info -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-receipt"></i> Thông tin đơn hàng</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Mã đơn hàng:</strong>
+                            <div class="h4 text-primary">#{{ order['id'] }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Ngày đặt:</strong>
+                            <div>{{ order['created_at'] }}</div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h6><i class="fas fa-user"></i> Thông tin người nhận</h6>
+                            <p class="mb-1"><strong>Họ tên:</strong> {{ order['customer_name'] }}</p>
+                            <p class="mb-1"><strong>SĐT:</strong> {{ order['customer_phone'] }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6><i class="fas fa-map-marker-alt"></i> Địa chỉ giao hàng</h6>
+                            <p class="mb-0">{{ order['customer_address'] }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Order Items -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-box"></i> Chi tiết đơn hàng</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Sản phẩm</th>
+                                    <th class="text-center">Số lượng</th>
+                                    <th class="text-end">Đơn giá</th>
+                                    <th class="text-end">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="{{ item['image_url'] }}" 
+                                                 alt="{{ item['name'] }}"
+                                                 class="rounded me-3"
+                                                 style="width: 50px; height: 50px; object-fit: cover;">
+                                            <strong>{{ item['name'] }}</strong>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">{{ item['quantity'] }}</td>
+                                    <td class="text-end">{{ "{:,.0f}".format(item['price']) }}₫</td>
+                                    <td class="text-end">
+                                        <strong>{{ "{:,.0f}".format(item['price'] * item['quantity']) }}₫</strong>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-end border-top pt-3">
+                                        <h5>Tổng cộng:</h5>
+                                    </td>
+                                    <td class="text-end border-top pt-3">
+                                        <h4 class="text-danger mb-0">
+                                            {{ "{:,.0f}".format(order['total_amount']) }}₫
+                                        </h4>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Next Steps -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3"><i class="fas fa-info-circle text-info"></i> Bước tiếp theo</h5>
+                    <ol class="mb-0">
+                        <li class="mb-2">Chúng tôi sẽ xác nhận đơn hàng qua điện thoại trong vài phút</li>
+                        <li class="mb-2">Đơn hàng sẽ được chuẩn bị và giao đến bạn trong 30-45 phút</li>
+                        <li class="mb-2">Vui lòng chuẩn bị tiền mặt để thanh toán khi nhận hàng</li>
+                        <li>Nếu có thắc mắc, vui lòng gọi hotline: <strong>0123 456 789</strong></li>
+                    </ol>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="text-center">
+                <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg me-2">
+                    <i class="fas fa-home"></i> Về trang chủ
+                </a>
+                <a href="{{ url_for('menu') }}" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-shopping-bag"></i> Tiếp tục mua hàng
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes checkmark {
+        0% {
+            transform: scale(0);
+            opacity: 0;
+        }
+        50% {
+            transform: scale(1.2);
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+    
+    .fa-check-circle {
+        animation: checkmark 0.5s ease-in-out;
+    }
+</style>
+{% endblock %}
