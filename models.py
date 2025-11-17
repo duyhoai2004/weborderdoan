@@ -204,42 +204,64 @@ class Order:
         """Lấy số đơn hàng hôm nay"""
         db = get_db()
         result = db.execute(
-            "SELECT COUNT(*) as count FROM orders WHERE DATE(created_at) = DATE('now')"
+            """SELECT COUNT(*) as count FROM orders 
+               WHERE DATE(created_at) = DATE('now', 'localtime')"""
         ).fetchone()
-        return result['count']
+        return result['count'] if result else 0
     
     @staticmethod
     def get_orders_this_week():
         """Lấy số đơn hàng tuần này"""
         db = get_db()
         result = db.execute(
-            "SELECT COUNT(*) as count FROM orders WHERE DATE(created_at) >= DATE('now', '-7 days')"
+            """SELECT COUNT(*) as count FROM orders 
+               WHERE DATE(created_at) >= DATE('now', 'localtime', '-7 days')"""
         ).fetchone()
-        return result['count']
+        return result['count'] if result else 0
     
     @staticmethod
     def get_orders_this_month():
         """Lấy số đơn hàng tháng này"""
         db = get_db()
         result = db.execute(
-            "SELECT COUNT(*) as count FROM orders WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')"
+            """SELECT COUNT(*) as count FROM orders 
+               WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now', 'localtime')"""
         ).fetchone()
-        return result['count']
+        return result['count'] if result else 0
     
     @staticmethod
     def get_revenue_by_date(days=7):
         """Lấy doanh thu theo ngày (dùng cho line chart)"""
         db = get_db()
+        
+        # Tạo danh sách các ngày
+        from datetime import datetime, timedelta
+        dates = []
+        revenues = {}
+        
+        for i in range(days):
+            date = (datetime.now() - timedelta(days=days-1-i)).strftime('%Y-%m-%d')
+            dates.append(date)
+            revenues[date] = 0
+        
+        # Lấy dữ liệu thực từ database
         result = db.execute(
             """SELECT DATE(created_at) as date, SUM(total_amount) as revenue
                FROM orders 
                WHERE status = 'completed' 
-               AND DATE(created_at) >= DATE('now', '-' || ? || ' days')
+               AND DATE(created_at) >= DATE('now', 'localtime', '-' || ? || ' days')
                GROUP BY DATE(created_at)
                ORDER BY date ASC""",
             (days,)
         ).fetchall()
-        return result
+        
+        # Gán dữ liệu vào dict
+        for row in result:
+            if row['date'] in revenues:
+                revenues[row['date']] = float(row['revenue'])
+        
+        # Trả về list có đầy đủ các ngày
+        return [{'date': date, 'revenue': revenues[date]} for date in dates]
     
     @staticmethod
     def get_orders_by_status():
@@ -248,8 +270,17 @@ class Order:
         result = db.execute(
             """SELECT status, COUNT(*) as count 
                FROM orders 
-               GROUP BY status"""
+               GROUP BY status
+               HAVING count > 0"""
         ).fetchall()
+        
+        # Nếu không có dữ liệu, trả về mẫu
+        if not result:
+            return [
+                {'status': 'pending', 'count': 0},
+                {'status': 'completed', 'count': 0}
+            ]
+        
         return result
     
     @staticmethod
@@ -267,6 +298,11 @@ class Order:
                LIMIT ?""",
             (limit,)
         ).fetchall()
+        
+        # Nếu không có dữ liệu, trả về danh sách rỗng
+        if not result:
+            return []
+        
         return result
     
     @staticmethod
@@ -283,3 +319,103 @@ class Order:
             (months,)
         ).fetchall()
         return result
+
+
+class Review:
+    """Model cho đánh giá sản phẩm"""
+    
+    @staticmethod
+    def create(product_id, customer_name, rating, comment, order_id=None):
+        """Tạo đánh giá mới"""
+        db = get_db()
+        cursor = db.execute(
+            '''INSERT INTO reviews (product_id, order_id, customer_name, rating, comment) 
+               VALUES (?, ?, ?, ?, ?)''',
+            (product_id, order_id, customer_name, rating, comment)
+        )
+        db.commit()
+        return cursor.lastrowid
+    
+    @staticmethod
+    def get_by_product(product_id):
+        """Lấy tất cả đánh giá của sản phẩm"""
+        db = get_db()
+        return db.execute(
+            '''SELECT * FROM reviews 
+               WHERE product_id = ? 
+               ORDER BY created_at DESC''',
+            (product_id,)
+        ).fetchall()
+    
+    @staticmethod
+    def get_all():
+        """Lấy tất cả đánh giá"""
+        db = get_db()
+        return db.execute(
+            '''SELECT r.*, p.name as product_name, p.image_url as product_image
+               FROM reviews r
+               JOIN products p ON r.product_id = p.id
+               ORDER BY r.created_at DESC'''
+        ).fetchall()
+    
+    @staticmethod
+    def get_recent(limit=10):
+        """Lấy đánh giá gần đây"""
+        db = get_db()
+        return db.execute(
+            '''SELECT r.*, p.name as product_name, p.image_url as product_image
+               FROM reviews r
+               JOIN products p ON r.product_id = p.id
+               ORDER BY r.created_at DESC
+               LIMIT ?''',
+            (limit,)
+        ).fetchall()
+    
+    @staticmethod
+    def get_average_rating(product_id):
+        """Lấy điểm đánh giá trung bình của sản phẩm"""
+        db = get_db()
+        result = db.execute(
+            '''SELECT AVG(rating) as avg_rating, COUNT(*) as review_count
+               FROM reviews 
+               WHERE product_id = ?''',
+            (product_id,)
+        ).fetchone()
+        
+        return {
+            'average': round(result['avg_rating'], 1) if result['avg_rating'] else 0,
+            'count': result['review_count']
+        }
+    
+    @staticmethod
+    def delete(review_id):
+        """Xóa đánh giá"""
+        db = get_db()
+        db.execute('DELETE FROM reviews WHERE id = ?', (review_id,))
+        db.commit()
+    
+    @staticmethod
+    def get_statistics():
+        """Thống kê đánh giá"""
+        db = get_db()
+        
+        # Tổng số đánh giá
+        total = db.execute('SELECT COUNT(*) as count FROM reviews').fetchone()['count']
+        
+        # Đánh giá theo rating
+        rating_dist = {}
+        for rating in range(1, 6):
+            count = db.execute(
+                'SELECT COUNT(*) as count FROM reviews WHERE rating = ?',
+                (rating,)
+            ).fetchone()['count']
+            rating_dist[rating] = count
+        
+        # Điểm trung bình
+        avg = db.execute('SELECT AVG(rating) as avg FROM reviews').fetchone()['avg']
+        
+        return {
+            'total': total,
+            'average': round(avg, 1) if avg else 0,
+            'distribution': rating_dist
+        }

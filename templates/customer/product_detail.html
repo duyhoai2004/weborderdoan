@@ -1,0 +1,359 @@
+{% extends "customer/base.html" %}
+
+{% block title %}{{ product['name'] }} - FoodOrder{% endblock %}
+
+{% block extra_css %}
+<style>
+.rating-stars {
+    color: #ffc107;
+    font-size: 1.2rem;
+}
+
+.rating-input {
+    display: flex;
+    gap: 10px;
+    font-size: 2rem;
+}
+
+.rating-input i {
+    cursor: pointer;
+    color: #ddd;
+    transition: color 0.3s;
+}
+
+.rating-input i:hover,
+.rating-input i.active {
+    color: #ffc107;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <!-- Product Image -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-lg">
+                <img src="{{ product['image_url'] }}" 
+                     class="card-img-top" 
+                     alt="{{ product['name'] }}"
+                     style="height: 500px; object-fit: cover;">
+            </div>
+        </div>
+        
+        <!-- Product Info -->
+        <div class="col-lg-6 mb-4">
+            <div class="mb-3">
+                <span class="category-badge">{{ product['category'] }}</span>
+            </div>
+            
+            <h1 class="mb-3">{{ product['name'] }}</h1>
+            
+            <div class="mb-3" id="productRating">
+                <i class="fas fa-spinner fa-spin"></i> Đang tải đánh giá...
+            </div>
+            
+            <p class="lead text-muted mb-4">{{ product['description'] }}</p>
+            
+            <div class="mb-4">
+                <h2 class="price-tag">{{ "{:,.0f}".format(product['price']) }}₫</h2>
+            </div>
+            
+            <form method="POST" action="{{ url_for('add_to_cart') }}" class="add-to-cart-form mb-4">
+                <input type="hidden" name="product_id" value="{{ product['id'] }}">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Số lượng:</label>
+                        <div class="input-group input-group-lg">
+                            <button type="button" class="btn btn-outline-secondary btn-decrease">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <input type="number" class="form-control text-center quantity-input" 
+                                   name="quantity" value="1" min="1" max="99">
+                            <button type="button" class="btn btn-outline-secondary btn-increase">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-cart-plus"></i> Thêm vào giỏ hàng
+                        </button>
+                    </div>
+                </div>
+            </form>
+            
+            <a href="{{ url_for('menu') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại thực đơn
+            </a>
+        </div>
+    </div>
+    
+    <!-- Reviews Section -->
+    <div class="row mt-5">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-star"></i> Đánh giá từ khách hàng</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Review Form -->
+                    <div class="mb-4 p-4 bg-light rounded">
+                        <h5 class="mb-3">Viết đánh giá của bạn</h5>
+                        <form id="reviewForm">
+                            <input type="hidden" name="product_id" value="{{ product['id'] }}">
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Họ tên *</label>
+                                <input type="text" class="form-control" name="customer_name" 
+                                       placeholder="Nhập tên của bạn" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Đánh giá *</label>
+                                <div class="rating-input" id="ratingInput">
+                                    <i class="far fa-star" data-rating="1"></i>
+                                    <i class="far fa-star" data-rating="2"></i>
+                                    <i class="far fa-star" data-rating="3"></i>
+                                    <i class="far fa-star" data-rating="4"></i>
+                                    <i class="far fa-star" data-rating="5"></i>
+                                </div>
+                                <input type="hidden" name="rating" id="ratingValue" value="5" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Nhận xét</label>
+                                <textarea class="form-control" name="comment" rows="3" 
+                                          placeholder="Chia sẻ trải nghiệm của bạn về món ăn này..."></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Gửi đánh giá
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <!-- Reviews List -->
+                    <div id="reviewsList">
+                        <div class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p class="mt-2">Đang tải đánh giá...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Related Products -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-utensils"></i> Món liên quan</h5>
+                </div>
+                <div class="card-body">
+                    {% for related in related_products %}
+                    <div class="d-flex mb-3 pb-3 border-bottom">
+                        <img src="{{ related['image_url'] }}" 
+                             alt="{{ related['name'] }}"
+                             class="rounded me-3"
+                             style="width: 80px; height: 80px; object-fit: cover;">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">
+                                <a href="{{ url_for('product_detail', product_id=related['id']) }}" 
+                                   class="text-decoration-none text-dark">
+                                    {{ related['name'] }}
+                                </a>
+                            </h6>
+                            <p class="text-danger fw-bold mb-0">
+                                {{ "{:,.0f}".format(related['price']) }}₫
+                            </p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load rating and reviews
+async function loadProductReviews() {
+    const productId = {{ product['id'] }};
+    
+    try {
+        // Load average rating
+        const ratingResponse = await fetch(`/api/product/${productId}/rating`);
+        const ratingData = await ratingResponse.json();
+        
+        const ratingHtml = `
+            <div class="d-flex align-items-center">
+                <div class="rating-stars me-2">
+                    ${generateStars(ratingData.average)}
+                </div>
+                <span class="fw-bold">${ratingData.average}</span>
+                <span class="text-muted ms-2">(${ratingData.count} đánh giá)</span>
+            </div>
+        `;
+        document.getElementById('productRating').innerHTML = ratingHtml;
+        
+        // Load reviews list
+        const reviewsResponse = await fetch(`/api/product/${productId}/reviews`);
+        const reviews = await reviewsResponse.json();
+        
+        if (reviews.length === 0) {
+            document.getElementById('reviewsList').innerHTML = `
+                <div class="text-center py-4 text-muted">
+                    <i class="far fa-comment-dots fa-3x mb-3"></i>
+                    <p>Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá!</p>
+                </div>
+            `;
+        } else {
+            const reviewsHtml = reviews.map(review => `
+                <div class="mb-3 pb-3 border-bottom">
+                    <div class="d-flex justify-content-between mb-2">
+                        <div>
+                            <strong>${review.customer_name}</strong>
+                            <div class="rating-stars small">${generateStars(review.rating)}</div>
+                        </div>
+                        <small class="text-muted">${formatDate(review.created_at)}</small>
+                    </div>
+                    ${review.comment ? `<p class="mb-0">${review.comment}</p>` : ''}
+                </div>
+            `).join('');
+            
+            document.getElementById('reviewsList').innerHTML = reviewsHtml;
+        }
+    } catch (error) {
+        console.error('Error loading reviews:', error);
+    }
+}
+
+function generateStars(rating) {
+    let stars = '';
+    for (let i = 1; i <= 5; i++) {
+        if (i <= rating) {
+            stars += '<i class="fas fa-star"></i> ';
+        } else if (i - 0.5 <= rating) {
+            stars += '<i class="fas fa-star-half-alt"></i> ';
+        } else {
+            stars += '<i class="far fa-star"></i> ';
+        }
+    }
+    return stars;
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN');
+}
+
+// Rating input
+document.querySelectorAll('#ratingInput i').forEach(star => {
+    star.addEventListener('click', function() {
+        const rating = this.dataset.rating;
+        document.getElementById('ratingValue').value = rating;
+        
+        document.querySelectorAll('#ratingInput i').forEach((s, index) => {
+            if (index < rating) {
+                s.classList.remove('far');
+                s.classList.add('fas', 'active');
+            } else {
+                s.classList.remove('fas', 'active');
+                s.classList.add('far');
+            }
+        });
+    });
+});
+
+// Set default 5 stars
+document.querySelectorAll('#ratingInput i').forEach(s => {
+    s.classList.remove('far');
+    s.classList.add('fas', 'active');
+});
+
+// Submit review
+document.getElementById('reviewForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch('/review/add', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast(result.message, 'success');
+            this.reset();
+            
+            // Reset rating to 5 stars
+            document.querySelectorAll('#ratingInput i').forEach(s => {
+                s.classList.remove('far');
+                s.classList.add('fas', 'active');
+            });
+            document.getElementById('ratingValue').value = 5;
+            
+            // Reload reviews
+            setTimeout(() => loadProductReviews(), 500);
+        } else {
+            showToast(result.message, 'danger');
+        }
+    } catch (error) {
+        showToast('Có lỗi xảy ra. Vui lòng thử lại!', 'danger');
+    }
+});
+
+// Quantity controls
+document.querySelector('.btn-increase').addEventListener('click', function() {
+    const input = document.querySelector('.quantity-input');
+    let value = parseInt(input.value);
+    if (value < 99) input.value = value + 1;
+});
+
+document.querySelector('.btn-decrease').addEventListener('click', function() {
+    const input = document.querySelector('.quantity-input');
+    let value = parseInt(input.value);
+    if (value > 1) input.value = value - 1;
+});
+
+// Add to cart
+document.querySelector('.add-to-cart-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const response = await fetch(this.action, {
+        method: 'POST',
+        body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+        showToast(result.message, 'success');
+        
+        const cartBadge = document.querySelector('.cart-badge');
+        if (cartBadge) {
+            cartBadge.textContent = result.cart_count;
+        } else if (result.cart_count > 0) {
+            const cartLink = document.querySelector('a[href*="cart"]');
+            const badge = document.createElement('span');
+            badge.className = 'cart-badge';
+            badge.textContent = result.cart_count;
+            cartLink.appendChild(badge);
+        }
+    } else {
+        showToast(result.message, 'danger');
+    }
+});
+
+// Load reviews on page load
+loadProductReviews();
+</script>
+{% endblock %}

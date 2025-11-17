@@ -1,7 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from functools import wraps
 from database import init_db, close_db
-from models import Product, Order
+from models import Product, Order, Review
 import traceback
 
 app = Flask(__name__)
@@ -82,6 +82,10 @@ def dashboard():
         # Top sản phẩm bán chạy
         top_products = Order.get_top_products(5)
         
+        # Đánh giá gần đây
+        recent_reviews = Review.get_recent(5)
+        review_stats = Review.get_statistics()
+        
         print(f"[DASHBOARD] Stats: {stats}")  # Debug
         
         return render_template('admin/dashboard.html',
@@ -91,7 +95,9 @@ def dashboard():
                              orders_today=orders_today,
                              orders_week=orders_week,
                              orders_month=orders_month,
-                             top_products=top_products)
+                             top_products=top_products,
+                             recent_reviews=recent_reviews,
+                             review_stats=review_stats)
     
     except Exception as e:
         print(f"[ERROR] Dashboard error: {e}")
@@ -364,6 +370,35 @@ def api_top_products_chart():
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/reviews')
+@login_required
+def reviews():
+    """Quản lý đánh giá"""
+    try:
+        all_reviews = Review.get_all()
+        review_stats = Review.get_statistics()
+        return render_template('admin/reviews.html', 
+                             reviews=all_reviews,
+                             stats=review_stats)
+    except Exception as e:
+        print(f"[ERROR] Reviews error: {e}")
+        traceback.print_exc()
+        flash(f'Lỗi: {str(e)}', 'danger')
+        return redirect(url_for('dashboard'))
+
+@app.route('/reviews/delete/<int:review_id>')
+@login_required
+def delete_review(review_id):
+    """Xóa đánh giá"""
+    try:
+        Review.delete(review_id)
+        flash('Đã xóa đánh giá thành công!', 'success')
+    except Exception as e:
+        print(f"[ERROR] Delete review error: {e}")
+        flash(f'Có lỗi xảy ra: {str(e)}', 'danger')
+    
+    return redirect(url_for('reviews'))
 
 if __name__ == '__main__':
     print("\n" + "="*60)

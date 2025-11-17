@@ -60,6 +60,21 @@ def init_db():
         )
     ''')
     
+    # Tạo bảng đánh giá
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS reviews (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL,
+            order_id INTEGER,
+            customer_name TEXT NOT NULL,
+            rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+            comment TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (product_id) REFERENCES products (id),
+            FOREIGN KEY (order_id) REFERENCES orders (id)
+        )
+    ''')
+    
     # Kiểm tra xem đã có dữ liệu chưa
     count = db.execute('SELECT COUNT(*) FROM products').fetchone()[0]
     
